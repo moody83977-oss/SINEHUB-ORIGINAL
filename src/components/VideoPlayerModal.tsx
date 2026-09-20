@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, Share2, Film } from 'lucide-react';
+import { X, ExternalLink, Share2, Play, RefreshCw } from 'lucide-react';
 import { Movie } from '../types';
 
 interface VideoPlayerModalProps {
@@ -8,59 +8,50 @@ interface VideoPlayerModalProps {
 }
 
 export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClose }) => {
-  const [embedUrl, setEmbedUrl] = useState('');
-  const [rawDriveUrl, setRawDriveUrl] = useState('');
+  const [driveId, setDriveId] = useState<string | null>(null);
+  const [playerMode, setPlayerMode] = useState<'embed' | 'direct'>('embed');
 
   useEffect(() => {
     if (!movie?.videoUrl) {
-      setEmbedUrl('');
-      setRawDriveUrl('');
+      setDriveId(null);
       return;
     }
 
     const url = movie.videoUrl.trim();
-
-    // Google Drive
     if (url.includes('drive.google.com')) {
-      const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
-      if (idMatch && idMatch[1]) {
-        setEmbedUrl(`https://drive.google.com/file/d/${idMatch[1]}/preview`);
-        setRawDriveUrl(`https://drive.google.com/file/d/${idMatch[1]}/view`);
+      const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        setDriveId(match[1]);
       } else {
-        setEmbedUrl(url);
-        setRawDriveUrl(url);
+        setDriveId(null);
       }
-      return;
+    } else {
+      setDriveId(null);
     }
-
-    // YouTube
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      let videoId = '';
-      if (url.includes('youtu.be')) {
-        videoId = url.split('/').pop()?.split('?')[0] || '';
-      } else {
-        try {
-          videoId = new URL(url).searchParams.get('v') || '';
-        } catch {
-          videoId = url.split('v=')[1]?.split('&')[0] || '';
-        }
-      }
-      if (videoId) {
-        setEmbedUrl(`https://www.youtube.com/embed/${videoId}?autoplay=1`);
-      } else {
-        setEmbedUrl(url);
-      }
-      setRawDriveUrl('');
-      return;
-    }
-
-    setEmbedUrl(url);
-    setRawDriveUrl('');
   }, [movie]);
 
   if (!movie) return null;
 
-  const isDirectVideo = Boolean(movie.videoUrl?.match(/\.(mp4|webm|ogg)$/i));
+  const url = movie.videoUrl.trim();
+  const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+  let youtubeEmbed = '';
+  if (isYouTube) {
+    let id = '';
+    if (url.includes('youtu.be')) {
+      id = url.split('/').pop()?.split('?')[0] || '';
+    } else {
+      try {
+        id = new URL(url).searchParams.get('v') || '';
+      } catch {
+        id = url.split('v=')[1]?.split('&')[0] || '';
+      }
+    }
+    youtubeEmbed = `https://www.youtube.com/embed/${id}?autoplay=1`;
+  }
+
+  const drivePreviewUrl = driveId ? `https://drive.google.com/file/d/${driveId}/preview` : url;
+  const driveDirectStreamUrl = driveId ? `https://drive.google.com/uc?export=download&id=${driveId}` : url;
+  const driveTabUrl = driveId ? `https://drive.google.com/file/d/${driveId}/view` : url;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
@@ -77,15 +68,15 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
           </div>
 
           <div className="flex items-center gap-2">
-            {rawDriveUrl && (
+            {driveId && (
               <a
-                href={rawDriveUrl}
+                href={driveTabUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-amber-400 text-xs font-semibold transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-neutral-950 text-xs font-bold hover:bg-amber-400 transition-colors"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
-                <span>Buksan sa Google Drive</span>
+                <span>Panoorin sa Google Drive</span>
               </a>
             )}
             <button
@@ -97,56 +88,84 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
           </div>
         </div>
 
-        {/* Player Area */}
+        {/* Video Area */}
         <div className="relative w-full bg-black aspect-video flex items-center justify-center">
-          {isDirectVideo ? (
+          {driveId && playerMode === 'direct' ? (
             <video
               controls
               autoPlay
-              src={movie.videoUrl}
+              src={driveDirectStreamUrl}
               className="w-full h-full"
+            />
+          ) : isYouTube ? (
+            <iframe
+              src={youtubeEmbed}
+              title={movie.title}
+              className="w-full h-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+              allowFullScreen
             />
           ) : (
             <iframe
-              src={embedUrl}
+              src={drivePreviewUrl}
               title={movie.title}
               className="w-full h-full border-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
               allowFullScreen
             />
           )}
         </div>
 
-        {/* Video Details */}
+        {/* Mode Selector for Google Drive */}
+        {driveId && (
+          <div className="bg-neutral-950 px-5 py-2.5 border-b border-neutral-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 text-neutral-400">
+              <span>Streaming Option:</span>
+              <button
+                onClick={() => setPlayerMode('embed')}
+                className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
+                  playerMode === 'embed'
+                    ? 'bg-amber-500 text-neutral-950'
+                    : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                }`}
+              >
+                Drive Preview
+              </button>
+              <button
+                onClick={() => setPlayerMode('direct')}
+                className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
+                  playerMode === 'direct'
+                    ? 'bg-amber-500 text-neutral-950'
+                    : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                }`}
+              >
+                Direct Stream
+              </button>
+            </div>
+
+            <span className="text-[11px] text-amber-500/80">
+              Kapag mabagal mag-process si Drive, i-click ang <b>"Panoorin sa Google Drive"</b> sa itaas.
+            </span>
+          </div>
+        )}
+
+        {/* Details Footer */}
         <div className="p-5 overflow-y-auto bg-neutral-900 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h3 className="text-xl font-bold text-white">{movie.title}</h3>
               {movie.tagline && <p className="text-xs text-amber-500 italic mt-0.5">{movie.tagline}</p>}
             </div>
-            <div className="flex items-center gap-2">
-              {rawDriveUrl && (
-                <a
-                  href={rawDriveUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="sm:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 text-xs font-semibold"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Buksan sa Drive</span>
-                </a>
-              )}
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
-                  alert('Na-kopyang link ng pelikula!');
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition-colors"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>I-share</span>
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(window.location.href);
+                alert('Na-kopyang link ng pelikula!');
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 transition-colors"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>I-share</span>
+            </button>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 p-3 bg-neutral-950/60 rounded-xl border border-neutral-800 text-xs">
