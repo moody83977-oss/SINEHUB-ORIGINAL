@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, Share2, Play } from 'lucide-react';
+import { X, ExternalLink, Share2, Play, AlertCircle } from 'lucide-react';
 import { Movie } from '../types';
 
 interface VideoPlayerModalProps {
@@ -49,7 +49,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
   }
 
   const drivePreviewUrl = driveId ? `https://drive.google.com/file/d/${driveId}/preview` : url;
-  const driveTabUrl = driveId ? `https://drive.google.com/file/d/${driveId}/view` : url;
+  const driveDirectAppUrl = driveId ? `https://drive.google.com/file/d/${driveId}/view?usp=sharing` : url;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
@@ -60,7 +60,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
             <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 text-xs font-bold border border-amber-500/20">
               {movie.quality || '1080p HD'}
             </span>
-            <h2 className="text-white font-bold text-xs sm:text-base truncate max-w-[180px] sm:max-w-md">
+            <h2 className="text-white font-bold text-xs sm:text-base truncate max-w-[160px] sm:max-w-md">
               {movie.title}
             </h2>
           </div>
@@ -68,13 +68,13 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
           <div className="flex items-center gap-2">
             {driveId && (
               <a
-                href={driveTabUrl}
+                href={driveDirectAppUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-neutral-950 text-xs font-bold hover:bg-amber-400 transition-colors shadow-sm"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>I-play sa Drive</span>
+                <span>Panoorin sa Phone</span>
               </a>
             )}
             <button
@@ -106,6 +106,24 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
             />
           )}
         </div>
+
+        {/* Drive Info helper for Mobile */}
+        {driveId && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between gap-2 text-[11px] text-amber-400">
+            <div className="flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>Kung may error si Google sa loob ng kahon, i-tap ang dilaw na button:</span>
+            </div>
+            <a
+              href={driveDirectAppUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold underline shrink-0 hover:text-amber-300"
+            >
+              Buksan sa App ➜
+            </a>
+          </div>
+        )}
 
         {/* Movie Info */}
         <div className="p-4 sm:p-5 overflow-y-auto bg-neutral-900 flex-1">
