@@ -12,7 +12,42 @@ import { Footer } from './components/Footer';
 
 import { Movie, Review, SortOption } from './types';
 import { DEFAULT_MOVIES, INITIAL_REVIEWS } from './data/defaultMovies';
-import { getAllMoviesFromDB, saveMovieToDB, deleteMovieFromDB, deleteMediaBlob } from './utils/db';
+
+// Safe Local Storage Database helpers
+const LOCAL_STORAGE_KEY = 'sinehub_user_uploaded_movies';
+
+function getStoredMovies(): Movie[] {
+  try {
+    const data = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistMovie(movie: Movie) {
+  try {
+    const list = getStoredMovies();
+    const idx = list.findIndex((m) => m.id === movie.id);
+    if (idx >= 0) {
+      list[idx] = movie;
+    } else {
+      list.unshift(movie);
+    }
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.error('Failed to save to localStorage:', e);
+  }
+}
+
+function removeStoredMovie(id: string) {
+  try {
+    const list = getStoredMovies().filter((m) => m.id !== id);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.error('Failed to delete from localStorage:', e);
+  }
+}
 
 export default function App() {
   // Movies list state
@@ -38,15 +73,15 @@ export default function App() {
   // Toast Notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Load custom user movies from IndexedDB
+  // Load custom user movies
   useEffect(() => {
     loadCustomMovies();
     loadSavedWatchlist();
   }, []);
 
-  const loadCustomMovies = async () => {
+  const loadCustomMovies = () => {
     try {
-      const customMovies = await getAllMoviesFromDB();
+      const customMovies = getStoredMovies();
       if (customMovies && customMovies.length > 0) {
         setMovies((prev) => {
           const existingIds = new Set(customMovies.map((m) => m.id));
@@ -55,7 +90,7 @@ export default function App() {
         });
       }
     } catch (err) {
-      console.error('Failed to load movies from IndexedDB:', err);
+      console.error('Failed to load movies:', err);
     }
   };
 
@@ -71,12 +106,8 @@ export default function App() {
   };
 
   // Save a movie (new or edit)
-  const handleSaveMovie = async (movie: Movie) => {
-    try {
-      await saveMovieToDB(movie);
-    } catch (err) {
-      console.error('Failed to persist movie to IndexedDB:', err);
-    }
+  const handleSaveMovie = (movie: Movie) => {
+    persistMovie(movie);
 
     setMovies((prev) => {
       const idx = prev.findIndex((m) => m.id === movie.id);
@@ -92,20 +123,11 @@ export default function App() {
     setMovieToEdit(null);
   };
 
-  const handleDeleteMovie = async (movie: Movie) => {
-    try {
-      await deleteMovieFromDB(movie.id);
-      if (movie.videoBlobId) await deleteMediaBlob(movie.videoBlobId);
-      if (movie.posterBlobId) await deleteMediaBlob(movie.posterBlobId);
-
-      setMovies((prev) => prev.filter((m) => m.id !== movie.id));
-      showToast('Nai-delete na ang pelikula.');
-    } catch (err) {
-      console.error('Failed to delete movie:', err);
-      showToast('Nagkaroon ng error sa pag-delete.');
-    } finally {
-      setMovieToDelete(null);
-    }
+  const handleDeleteMovie = (movie: Movie) => {
+    removeStoredMovie(movie.id);
+    setMovies((prev) => prev.filter((m) => m.id !== movie.id));
+    showToast('Nai-delete na ang pelikula.');
+    setMovieToDelete(null);
   };
 
   const toggleWatchlist = (movieId: string) => {
