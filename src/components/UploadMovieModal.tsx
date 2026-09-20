@@ -103,7 +103,6 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className="relative w-full max-w-2xl bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-neutral-900/50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-amber-500/10 text-amber-500 rounded-lg">
@@ -126,7 +125,6 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           {error && (
             <div className="p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-sm flex items-center gap-3">
@@ -135,7 +133,6 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
             </div>
           )}
 
-          {/* Title & Tagline */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">
@@ -164,7 +161,6 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
             </div>
           </div>
 
-          {/* Video URL (Google Drive / YouTube) */}
           <div>
             <label className="block text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">
               Video URL (I-paste ang Google Drive o YouTube Link) *
@@ -179,7 +175,6 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
             />
           </div>
 
-          {/* Poster Image URL */}
           <div>
             <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">
               Poster Image URL (Opsiyonal)
@@ -193,7 +188,6 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
             />
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">
               Buod ng Pelikula (Description)
@@ -207,7 +201,6 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
             />
           </div>
 
-          {/* Buttons */}
           <div className="pt-4 border-t border-neutral-800 flex items-center justify-end gap-3">
             <button
               type="button"
