@@ -23,7 +23,7 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [genre, setGenre] = useState(GENRES[1]);
   const [duration, setDuration] = useState('108 min');
-  const [rating, setRating] = useState(5);
+  const [rating] = useState(5);
   const [posterUrl, setPosterUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -38,7 +38,6 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
       setYear(editingMovie.year);
       setGenre(editingMovie.genre);
       setDuration(editingMovie.duration);
-      setRating(editingMovie.rating);
       setPosterUrl(editingMovie.posterUrl || '');
       setVideoUrl(editingMovie.videoUrl || '');
     } else {
@@ -49,7 +48,6 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
       setYear(new Date().getFullYear());
       setGenre(GENRES[1]);
       setDuration('108 min');
-      setRating(5);
       setPosterUrl('');
       setVideoUrl('');
     }
@@ -64,7 +62,7 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
       return;
     }
     if (!videoUrl.trim()) {
-      setError('Mangyaring i-paste ang Video Link (Google Drive / YouTube).');
+      setError('Mangyaring i-paste ang Video Link (Google Drive o YouTube).');
       return;
     }
 
@@ -116,7 +114,7 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
                 {editingMovie ? 'I-edit ang Pelikula' : 'Mag-upload ng Bagong Pelikula'}
               </h3>
               <p className="text-xs text-neutral-400">
-                I-paste ang Google Drive link ng iyong pelikula
+                I-paste ang Google Drive o YouTube link ng iyong pelikula
               </p>
             </div>
           </div>
@@ -190,7 +188,7 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
               type="url"
               value={posterUrl}
               onChange={(e) => setPosterUrl(e.target.value)}
-              placeholder="https://images.unsplash.com/... o link ng image"
+              placeholder="https://images.unsplash.com/... o image link"
               className="w-full bg-neutral-800/80 border border-neutral-700 rounded-xl px-4 py-2.5 text-white text-sm"
             />
           </div>
