@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, Share2, Play, AlertCircle } from 'lucide-react';
+import { X, ExternalLink, Share2, Play, Film } from 'lucide-react';
 import { Movie } from '../types';
 
 interface VideoPlayerModalProps {
@@ -87,7 +87,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
         </div>
 
         {/* Video Player */}
-        <div className="relative w-full bg-black aspect-video flex items-center justify-center">
+        <div className="relative w-full bg-black aspect-video flex items-center justify-center overflow-hidden">
           {isYouTube ? (
             <iframe
               src={youtubeEmbed}
@@ -97,30 +97,45 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
               allowFullScreen
             />
           ) : (
-            <iframe
-              src={drivePreviewUrl}
-              title={movie.title}
-              className="w-full h-full border-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-              allowFullScreen
-            />
+            <div className="relative w-full h-full flex flex-col items-center justify-center">
+              <iframe
+                src={drivePreviewUrl}
+                title={movie.title}
+                className="w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowFullScreen
+              />
+
+              {/* Mobile overlay button kung sakaling mag-error si Google Docs */}
+              {driveId && (
+                <div className="absolute inset-x-4 bottom-4 sm:hidden flex justify-center">
+                  <a
+                    href={driveDirectAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 px-4 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-black text-sm rounded-xl flex items-center justify-center gap-2 shadow-2xl shadow-amber-500/50"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    <span>I-TAP PARA I-PLAY SA CELLPHONE</span>
+                  </a>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Drive Info helper for Mobile */}
+        {/* Action strip */}
         {driveId && (
-          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between gap-2 text-[11px] text-amber-400">
-            <div className="flex items-center gap-1.5">
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-              <span>Kung may error si Google sa loob ng kahon, i-tap ang dilaw na button:</span>
-            </div>
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2.5 flex items-center justify-between gap-2 text-xs text-amber-400">
+            <span className="truncate">Para sa tuluy-tuloy na panonood sa cellphone:</span>
             <a
               href={driveDirectAppUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-bold underline shrink-0 hover:text-amber-300"
+              className="font-bold underline shrink-0 hover:text-amber-300 flex items-center gap-1"
             >
-              Buksan sa App ➜
+              <span>Buksan sa Fullscreen</span>
+              <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>
         )}
