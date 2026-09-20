@@ -38,41 +38,40 @@ export default function App() {
   // Toast Notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
+  // Load custom user movies from IndexedDB
+  useEffect(() => {
+    loadCustomMovies();
+    loadSavedWatchlist();
+  }, []);
+
+  const loadCustomMovies = async () => {
+    try {
+      const customMovies = await getAllMoviesFromDB();
+      if (customMovies && customMovies.length > 0) {
+        setMovies((prev) => {
+          const existingIds = new Set(customMovies.map((m) => m.id));
+          const filteredDefaults = DEFAULT_MOVIES.filter((m) => !existingIds.has(m.id));
+          return [...customMovies, ...filteredDefaults];
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load movies from IndexedDB:', err);
+    }
   };
 
-  // Load user uploaded movies from IndexedDB and local storage on mount
-  useEffect(() => {
-    async function loadSavedData() {
-      try {
-        const savedDbMovies = await getAllMoviesFromDB();
-        if (savedDbMovies && savedDbMovies.length > 0) {
-          // Combine user uploaded movies with default showcase movies
-          setMovies((prev) => {
-            const combined = [...savedDbMovies, ...DEFAULT_MOVIES];
-            // Remove duplicates by ID
-            const seen = new Set();
-            return combined.filter((m) => {
-              if (seen.has(m.id)) return false;
-              seen.add(m.id);
-              return true;
-            });
-          });
-        }
+  const loadSavedWatchlist = () => {
+    try {
+      const saved = localStorage.getItem('sinehub_watchlist');
+      if (saved) {
+        setWatchlistIds(new Set(JSON.parse(saved)));
+      }
+    } catch (e) {
+      console.error('Failed to load watchlist:', e);
+    }
+  };
 
-        // Load saved watchlist
-        const savedWatchlist = localStorage.getItem('sinehub_watchlist');
-        if (savedWatchlist) {
-          setWatchlistIds(new Set(JSON.parse(savedWatchlist)));
-        }
-
-        // Load saved reviews
-        const savedReviews = localStorage.getItem('sinehub_reviews');
-        if (savedReviews) {
-          setReviews((prev) => ({
-          const handleSaveMovie = async (movie: Movie) => {
+  // Save a movie (new or edit)
+  const handleSaveMovie = async (movie: Movie) => {
     try {
       await saveMovieToDB(movie);
     } catch (err) {
@@ -92,173 +91,125 @@ export default function App() {
     showToast(movieToEdit ? 'Matagumpay na na-edit ang pelikula!' : 'Matagumpay na na-upload ang pelikula!');
     setMovieToEdit(null);
   };
-            ...JSON.parse(savedReviews)
-          }));
-        }
-      } catch (err) {
-        console.error('Error loading initial data from DB:', err);
-      }
-    }
 
-    loadSavedData();
-  }, []);
-
-  // Save watchlist to localStorage whenever it changes
-  const toggleWatchlist = (movie: Movie) => {
-    setWatchlistIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(movie.id)) {
-        next.delete(movie.id);
-        showToast(language === 'tl' ? `Inalis ang "${movie.title}" sa Watchlist` : `Removed "${movie.title}" from Watchlist`);
-      } else {
-        next.add(movie.id);
-        showToast(language === 'tl' ? `Naidagdag ang "${movie.title}" sa Watchlist` : `Added "${movie.title}" to Watchlist`);
-      }
-      localStorage.setItem('sinehub_watchlist', JSON.stringify(Array.from(next)));
-      return next;
-    });
-  };
-
-  // Add review handler
-  const handleAddReview = (movieId: string, newReviewData: Omit<Review, 'id' | 'movieId' | 'date'>) => {
-    const newReview: Review = {
-      id: 'rev_' + Date.now().toString(36),
-      movieId,
-      author: newReviewData.author,
-      rating: newReviewData.rating,
-      comment: newReviewData.comment,
-      date: language === 'tl' ? 'Kani-kanina lang' : 'Just now'
-    };
-
-    setReviews((prev) => {
-      const existing = prev[movieId] || [];
-      const updated = [newReview, ...existing];
-      const nextReviews = { ...prev, [movieId]: updated };
-      localStorage.setItem('sinehub_reviews', JSON.stringify(nextReviews));
-      return nextReviews;
-    });
-
-    // Recalculate movie average rating
-    setMovies((prev) =>
-      prev.map((m) => {
-        if (m.id === movieId) {
-          const movieRevs = [newReview, ...(reviews[movieId] || [])];
-          const avg = movieRevs.reduce((acc, r) => acc + r.rating, 0) / movieRevs.length;
-          return {
-            ...m,
-            averageRating: Math.round(avg * 10) / 10,
-            totalReviews: movieRevs.length
-          };
-        }
-        return m;
-      })
-    );
-
-    showToast(language === 'tl' ? 'Naipasa ang iyong review!' : 'Your review has been submitted!');
-  };
-
-  // Movie uploaded or edited handler
-  const handleMovieUploaded = (movie: Movie) => {
-    setMovies((prev) => {
-      const existsIndex = prev.findIndex((m) => m.id === movie.id);
-      if (existsIndex >= 0) {
-        const copy = [...prev];
-        copy[existsIndex] = movie;
-        return copy;
-      } else {
-        return [movie, ...prev];
-      }
-    });
-
-    showToast(language === 'tl' ? `Tagumpay na nai-publish ang "${movie.title}"!` : `Successfully published "${movie.title}"!`);
-  };
-
-  // Delete movie handler
-  const handleConfirmDeleteMovie = async (movie: Movie) => {
+  const handleDeleteMovie = async (movie: Movie) => {
     try {
       await deleteMovieFromDB(movie.id);
-      if (movie.videoBlobKey) {
-        await deleteMediaBlob(movie.videoBlobKey);
-      }
-      if (movie.posterBlobKey) {
-        await deleteMediaBlob(movie.posterBlobKey);
-      }
+      if (movie.videoBlobId) await deleteMediaBlob(movie.videoBlobId);
+      if (movie.posterBlobId) await deleteMediaBlob(movie.posterBlobId);
 
       setMovies((prev) => prev.filter((m) => m.id !== movie.id));
-      setMovieToDelete(null);
-      if (activeMovieForDetails?.id === movie.id) {
-        setActiveMovieForDetails(null);
-      }
-      showToast(language === 'tl' ? `Nabura ang pelikulang "${movie.title}".` : `Deleted movie "${movie.title}".`);
+      showToast('Nai-delete na ang pelikula.');
     } catch (err) {
       console.error('Failed to delete movie:', err);
-      showToast('Error deleting movie.');
+      showToast('Nagkaroon ng error sa pag-delete.');
+    } finally {
+      setMovieToDelete(null);
     }
   };
 
-  // Filtered & Sorted movies
-  const userMovies = useMemo(() => movies.filter((m) => m.isUserUploaded), [movies]);
+  const toggleWatchlist = (movieId: string) => {
+    setWatchlistIds((prev) => {
+      const updated = new Set(prev);
+      if (updated.has(movieId)) {
+        updated.delete(movieId);
+        showToast('Inalis sa Watchlist.');
+      } else {
+        updated.add(movieId);
+        showToast('Idinagdag sa iyong Watchlist! ★');
+      }
+      try {
+        localStorage.setItem('sinehub_watchlist', JSON.stringify(Array.from(updated)));
+      } catch (e) {
+        console.error('Failed to save watchlist:', e);
+      }
+      return updated;
+    });
+  };
 
+  const handleAddReview = (movieId: string, review: Review) => {
+    setReviews((prev) => {
+      const existing = prev[movieId] || [];
+      const updatedReviews = [review, ...existing];
+      const newRating = Number(
+        (updatedReviews.reduce((sum, r) => sum + r.rating, 0) / updatedReviews.length).toFixed(1)
+      );
+
+      setMovies((prevMovies) =>
+        prevMovies.map((m) => (m.id === movieId ? { ...m, rating: newRating } : m))
+      );
+
+      return {
+        ...prev,
+        [movieId]: updatedReviews,
+      };
+    });
+    showToast('Salamat sa iyong pagsusuri (Review)!');
+  };
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  };
+
+  // Filter & Sort movies
   const filteredMovies = useMemo(() => {
     let result = [...movies];
 
-    // Search filter
+    if (selectedGenre !== 'Lahat (All)') {
+      result = result.filter((m) => m.genre.toLowerCase() === selectedGenre.toLowerCase());
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
         (m) =>
           m.title.toLowerCase().includes(q) ||
           m.director.toLowerCase().includes(q) ||
-          m.genre.some((g) => g.toLowerCase().includes(q)) ||
-          m.cast.some((c) => c.toLowerCase().includes(q)) ||
-          m.synopsis.toLowerCase().includes(q)
+          m.genre.toLowerCase().includes(q) ||
+          m.description.toLowerCase().includes(q)
       );
     }
 
-    // Genre filter
-    if (selectedGenre === 'Aking Uploads') {
-      result = result.filter((m) => m.isUserUploaded);
-    } else if (selectedGenre !== 'Lahat (All)') {
-      result = result.filter((m) => m.genre.some((g) => g.toLowerCase() === selectedGenre.toLowerCase()));
-    }
-
-    // Sorting
-    if (sortBy === 'newest') {
-      result.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
-    } else if (sortBy === 'rating') {
-      result.sort((a, b) => b.averageRating - a.averageRating);
-    } else if (sortBy === 'duration') {
-      result.sort((a, b) => b.durationMinutes - a.durationMinutes);
-    } else if (sortBy === 'title') {
-      result.sort((a, b) => a.title.localeCompare(b.title));
-    }
+    result.sort((a, b) => {
+      if (sortBy === 'rating') {
+        const rA = typeof a.rating === 'number' ? a.rating : 4.0;
+        const rB = typeof b.rating === 'number' ? b.rating : 4.0;
+        return rB - rA;
+      }
+      if (sortBy === 'newest') {
+        return (b.year || 2024) - (a.year || 2024);
+      }
+      return (b.isOriginal ? 1 : 0) - (a.isOriginal ? 1 : 0);
+    });
 
     return result;
-  }, [movies, searchQuery, selectedGenre, sortBy]);
+  }, [movies, selectedGenre, searchQuery, sortBy]);
 
-  // Featured spotlight movie for hero banner
-  const spotlightMovie = useMemo(() => {
-    // If user has uploaded any movie, spotlight their newest upload!
-    const myNewest = movies.find((m) => m.isUserUploaded);
-    if (myNewest) return myNewest;
-    return movies[0] || null;
+  const featuredMovie = useMemo(() => {
+    return movies.find((m) => m.isFeatured) || movies[0];
   }, [movies]);
 
-  const watchlistMovies = useMemo(
-    () => movies.filter((m) => watchlistIds.has(m.id)),
-    [movies, watchlistIds]
-  );
+  const myUploadedMovies = useMemo(() => {
+    return movies.filter((m) => m.isUserUploaded);
+  }, [movies]);
+
+  const watchlistMovies = useMemo(() => {
+    return movies.filter((m) => watchlistIds.has(m.id));
+  }, [movies, watchlistIds]);
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-['Plus_Jakarta_Sans',sans-serif] selection:bg-amber-400 selection:text-neutral-950">
-      {/* Toast Notification Banner */}
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-amber-500 selection:text-black">
+      {/* Toast alert */}
       {toastMessage && (
-        <div className="fixed top-20 right-4 z-50 px-4 py-3 bg-amber-400 text-neutral-950 font-bold text-xs rounded-xl shadow-xl shadow-amber-400/20 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="fixed top-20 right-6 z-50 bg-amber-500 text-neutral-950 font-bold px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce border border-amber-300">
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Main Navbar */}
+      {/* Navigation Header */}
       <Navbar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -268,147 +219,126 @@ export default function App() {
         }}
         onOpenStudio={() => setIsStudioOpen(true)}
         onOpenWatchlist={() => setIsWatchlistOpen(true)}
-        userMoviesCount={userMovies.length}
         watchlistCount={watchlistIds.size}
+        myMoviesCount={myUploadedMovies.length}
         language={language}
-        onToggleLanguage={() => setLanguage((l) => (l === 'tl' ? 'en' : 'tl'))}
-        onShowAllMovies={() => {
-          setSelectedGenre('Lahat (All)');
-          setSearchQuery('');
-        }}
+        onToggleLanguage={() => setLanguage((prev) => (prev === 'tl' ? 'en' : 'tl'))}
       />
 
-      {/* Cinematic Hero Spotlight (Only when not actively filtering by search) */}
-      {!searchQuery && (
+      {/* Main Hero Showcase */}
+      {featuredMovie && !searchQuery && (
         <HeroBanner
-          movie={spotlightMovie}
-          onPlay={(m) => setActiveMovieForPlayer(m)}
-          onSelectMovie={(m) => setActiveMovieForDetails(m)}
-          isInWatchlist={spotlightMovie ? watchlistIds.has(spotlightMovie.id) : false}
-          onToggleWatchlist={toggleWatchlist}
-          language={language}
+          movie={featuredMovie}
+          onWatch={(movie) => setActiveMovieForPlayer(movie)}
+          onShowDetails={(movie) => setActiveMovieForDetails(movie)}
+          isWatchlisted={watchlistIds.has(featuredMovie.id)}
+          onToggleWatchlist={() => toggleWatchlist(featuredMovie.id)}
         />
       )}
 
-      {/* Movie Catalog Grid & Categories */}
-      <main className="flex-1">
+      {/* Catalog & Grid Section */}
+      <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
         <MovieGrid
           movies={filteredMovies}
           selectedGenre={selectedGenre}
           onSelectGenre={setSelectedGenre}
           sortBy={sortBy}
           onSortChange={setSortBy}
-          onPlay={(m) => setActiveMovieForPlayer(m)}
-          onSelectMovie={(m) => setActiveMovieForDetails(m)}
+          onWatchMovie={(movie) => setActiveMovieForPlayer(movie)}
+          onSelectMovie={(movie) => setActiveMovieForDetails(movie)}
           watchlistIds={watchlistIds}
           onToggleWatchlist={toggleWatchlist}
-          onDeleteMovie={(m) => setMovieToDelete(m)}
-          onEditMovie={(m) => {
-            setMovieToEdit(m);
+          onEditMovie={(movie) => {
+            setMovieToEdit(movie);
             setIsUploadOpen(true);
           }}
+          onDeleteMovie={(movie) => setMovieToDelete(movie)}
           onOpenUpload={() => {
             setMovieToEdit(null);
             setIsUploadOpen(true);
           }}
-          language={language}
-          userMoviesCount={userMovies.length}
+          searchQuery={searchQuery}
         />
       </main>
 
       {/* Footer */}
-      <Footer
-        onOpenUpload={() => {
-          setMovieToEdit(null);
-          setIsUploadOpen(true);
-        }}
-        language={language}
-      />
+      <Footer />
 
-      {/* Modals & Overlays */}
-      {/* 1. Video Player Modal */}
-      {activeMovieForPlayer && (
-        <VideoPlayerModal
-          movie={activeMovieForPlayer}
-          onClose={() => setActiveMovieForPlayer(null)}
-          language={language}
-        />
-      )}
-
-      {/* 2. Movie Details & Reviews Modal */}
-      {activeMovieForDetails && (
-        <MovieDetailModal
-          movie={activeMovieForDetails}
-          onClose={() => setActiveMovieForDetails(null)}
-          onPlay={(m) => {
-            setActiveMovieForDetails(null);
-            setActiveMovieForPlayer(m);
-          }}
-          isInWatchlist={watchlistIds.has(activeMovieForDetails.id)}
-          onToggleWatchlist={toggleWatchlist}
-          reviews={reviews[activeMovieForDetails.id] || []}
-          onAddReview={handleAddReview}
-          onEditMovie={(m) => {
-            setActiveMovieForDetails(null);
-            setMovieToEdit(m);
-            setIsUploadOpen(true);
-          }}
-          onDeleteMovie={(m) => {
-            setActiveMovieForDetails(null);
-            setMovieToDelete(m);
-          }}
-          language={language}
-        />
-      )}
-
-      {/* 3. Upload Original Movie Modal */}
+      {/* MODALS */}
+      {/* Upload & Edit Modal */}
       <UploadMovieModal
         isOpen={isUploadOpen}
         onClose={() => {
           setIsUploadOpen(false);
           setMovieToEdit(null);
         }}
-        onMovieUploaded={handleMovieUploaded}
-        movieToEdit={movieToEdit}
-        language={language}
+        onSaveMovie={handleSaveMovie}
+        editingMovie={movieToEdit}
       />
 
-      {/* 4. Creator Studio Modal */}
+      {/* Creator Studio Modal */}
       <CreatorStudioModal
         isOpen={isStudioOpen}
         onClose={() => setIsStudioOpen(false)}
-        movies={movies}
-        onPlay={(m) => setActiveMovieForPlayer(m)}
+        uploadedMovies={myUploadedMovies}
+        onWatch={(movie) => setActiveMovieForPlayer(movie)}
+        onEdit={(movie) => {
+          setIsStudioOpen(false);
+          setMovieToEdit(movie);
+          setIsUploadOpen(true);
+        }}
+        onDelete={(movie) => {
+          setMovieToDelete(movie);
+        }}
         onOpenUpload={() => {
+          setIsStudioOpen(false);
           setMovieToEdit(null);
           setIsUploadOpen(true);
         }}
-        onEditMovie={(m) => {
-          setMovieToEdit(m);
-          setIsUploadOpen(true);
-        }}
-        onDeleteMovie={(m) => setMovieToDelete(m)}
-        language={language}
       />
 
-      {/* 5. Watchlist Modal */}
+      {/* Watchlist Modal */}
       <WatchlistModal
         isOpen={isWatchlistOpen}
         onClose={() => setIsWatchlistOpen(false)}
         watchlistMovies={watchlistMovies}
-        onPlay={(m) => setActiveMovieForPlayer(m)}
-        onRemoveFromWatchlist={toggleWatchlist}
-        onSelectMovie={(m) => setActiveMovieForDetails(m)}
-        language={language}
+        onWatch={(movie) => setActiveMovieForPlayer(movie)}
+        onRemove={(movieId) => toggleWatchlist(movieId)}
       />
 
-      {/* 6. Delete Confirmation Modal */}
-      <DeleteConfirmModal
-        movie={movieToDelete}
-        onClose={() => setMovieToDelete(null)}
-        onConfirmDelete={handleConfirmDeleteMovie}
-        language={language}
-      />
+      {/* Movie Details Modal */}
+      {activeMovieForDetails && (
+        <MovieDetailModal
+          movie={activeMovieForDetails}
+          reviews={reviews[activeMovieForDetails.id] || []}
+          onClose={() => setActiveMovieForDetails(null)}
+          onWatch={() => {
+            const m = activeMovieForDetails;
+            setActiveMovieForDetails(null);
+            setActiveMovieForPlayer(m);
+          }}
+          isWatchlisted={watchlistIds.has(activeMovieForDetails.id)}
+          onToggleWatchlist={() => toggleWatchlist(activeMovieForDetails.id)}
+          onAddReview={(review) => handleAddReview(activeMovieForDetails.id, review)}
+        />
+      )}
+
+      {/* Video Player Modal */}
+      {activeMovieForPlayer && (
+        <VideoPlayerModal
+          movie={activeMovieForPlayer}
+          onClose={() => setActiveMovieForPlayer(null)}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {movieToDelete && (
+        <DeleteConfirmModal
+          movie={movieToDelete}
+          onClose={() => setMovieToDelete(null)}
+          onConfirm={() => handleDeleteMovie(movieToDelete)}
+        />
+      )}
     </div>
   );
 }
