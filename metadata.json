@@ -1,0 +1,6 @@
+{
+  "name": "SineHub - Original Movies",
+  "description": "A dedicated video streaming and showcase platform for creators to upload, manage, and stream original movies and indie films.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
