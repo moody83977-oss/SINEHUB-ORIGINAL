@@ -12,7 +12,7 @@ import { Footer } from './components/Footer';
 
 import { Movie, Review, SortOption } from './types';
 import { DEFAULT_MOVIES, INITIAL_REVIEWS } from './data/defaultMovies';
-import { getAllMoviesFromDB, deleteMovieFromDB, deleteMediaBlob } from './utils/db';
+import { getAllMoviesFromDB, saveMovieToDB, deleteMovieFromDB, deleteMediaBlob } from './utils/db';
 
 export default function App() {
   // Movies list state
@@ -72,7 +72,26 @@ export default function App() {
         const savedReviews = localStorage.getItem('sinehub_reviews');
         if (savedReviews) {
           setReviews((prev) => ({
-            ...prev,
+          const handleSaveMovie = async (movie: Movie) => {
+    try {
+      await saveMovieToDB(movie);
+    } catch (err) {
+      console.error('Failed to persist movie to IndexedDB:', err);
+    }
+
+    setMovies((prev) => {
+      const idx = prev.findIndex((m) => m.id === movie.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = movie;
+        return updated;
+      } else {
+        return [movie, ...prev];
+      }
+    });
+    showToast(movieToEdit ? 'Matagumpay na na-edit ang pelikula!' : 'Matagumpay na na-upload ang pelikula!');
+    setMovieToEdit(null);
+  };
             ...JSON.parse(savedReviews)
           }));
         }
