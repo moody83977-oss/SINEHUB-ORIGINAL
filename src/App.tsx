@@ -48,7 +48,7 @@ const INITIAL_MOVIES: Movie[] = [
   }
 ];
 
-export function App() {
+export default function App() {
   const [movies, setMovies] = useState<Movie[]>(() => {
     try {
       const saved = localStorage.getItem('sinehub_movies_list');
@@ -234,3 +234,5 @@ export function App() {
     </div>
   );
 }
+
+export { App };
