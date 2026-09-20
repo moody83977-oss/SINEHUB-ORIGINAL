@@ -1,7 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { X, Film, AlertCircle } from 'lucide-react';
 import { Movie } from '../types';
-import { GENRES } from '../data/defaultMovies';
+
+const GENRE_LIST = [
+  'Aksyon (Action)',
+  'Drama',
+  'Katatakutan (Horror)',
+  'Komedya (Comedy)',
+  'Romansa (Romance)',
+  'Sci-Fi',
+  'Misteryo (Mystery)',
+  'Dokumentaryo',
+  'Indie Shorts',
+];
 
 interface UploadMovieModalProps {
   isOpen: boolean;
@@ -21,7 +32,7 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
   const [description, setDescription] = useState('');
   const [director, setDirector] = useState('');
   const [year, setYear] = useState<number>(new Date().getFullYear());
-  const [genre, setGenre] = useState(GENRES[1]);
+  const [genre, setGenre] = useState(GENRE_LIST[0]);
   const [duration, setDuration] = useState('108 min');
   const [rating] = useState(5);
   const [posterUrl, setPosterUrl] = useState('');
@@ -46,7 +57,7 @@ export const UploadMovieModal: React.FC<UploadMovieModalProps> = ({
       setDescription('');
       setDirector('');
       setYear(new Date().getFullYear());
-      setGenre(GENRES[1]);
+      setGenre(GENRE_LIST[0]);
       setDuration('108 min');
       setPosterUrl('');
       setVideoUrl('');
