@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, Share2, Play, Film, Smartphone, Monitor } from 'lucide-react';
+import { X, ExternalLink, Share2, Play, Film, Server, Zap } from 'lucide-react';
 import { Movie } from '../types';
 
 interface VideoPlayerModalProps {
@@ -9,6 +9,7 @@ interface VideoPlayerModalProps {
 
 export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClose }) => {
   const [driveId, setDriveId] = useState<string | null>(null);
+  const [activeServer, setActiveServer] = useState<'drive' | 'direct' | 'preview'>('drive');
 
   useEffect(() => {
     if (!movie?.videoUrl) {
@@ -50,6 +51,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
 
   const drivePreviewUrl = driveId ? `https://drive.google.com/file/d/${driveId}/preview` : url;
   const driveDirectAppUrl = driveId ? `https://drive.google.com/file/d/${driveId}/view?usp=sharing` : url;
+  const driveDownloadStreamUrl = driveId ? `https://drive.google.com/uc?id=${driveId}&export=download` : url;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
@@ -71,7 +73,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
                 href={driveDirectAppUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-neutral-950 text-xs font-bold hover:bg-amber-400 transition-colors shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-neutral-950 text-xs font-black hover:bg-amber-400 transition-colors shadow-sm"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
                 <span>Panoorin sa Phone</span>
@@ -86,6 +88,35 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
           </div>
         </div>
 
+        {/* Streaming Servers Selector */}
+        {driveId && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-neutral-950/80 border-b border-neutral-800 text-xs overflow-x-auto">
+            <span className="text-neutral-500 flex items-center gap-1 shrink-0">
+              <Server className="w-3.5 h-3.5" /> Server:
+            </span>
+            <button
+              onClick={() => setActiveServer('drive')}
+              className={`px-3 py-1 rounded-md font-semibold transition-colors shrink-0 flex items-center gap-1 ${
+                activeServer === 'drive'
+                  ? 'bg-amber-500 text-neutral-950'
+                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+              }`}
+            >
+              <Zap className="w-3 h-3" /> Mobile High-Speed (Recommended)
+            </button>
+            <button
+              onClick={() => setActiveServer('preview')}
+              className={`px-3 py-1 rounded-md font-semibold transition-colors shrink-0 ${
+                activeServer === 'preview'
+                  ? 'bg-amber-500 text-neutral-950'
+                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+              }`}
+            >
+              Web Embedded (Laptop)
+            </button>
+          </div>
+        )}
+
         {/* Video Player Box */}
         <div className="relative w-full bg-black aspect-video flex items-center justify-center overflow-hidden">
           {isYouTube ? (
@@ -98,35 +129,47 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
             />
           ) : driveId ? (
             <div className="relative w-full h-full flex flex-col items-center justify-center">
-              {/* Desktop view: Iframe */}
-              <iframe
-                src={drivePreviewUrl}
-                title={movie.title}
-                className="hidden sm:block w-full h-full border-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                allowFullScreen
-              />
+              {activeServer === 'preview' ? (
+                <iframe
+                  src={drivePreviewUrl}
+                  title={movie.title}
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  allowFullScreen
+                />
+              ) : (
+                /* Mobile High-Speed Server with Instant Direct Player */
+                <div className="flex flex-col items-center justify-center text-center p-6 w-full h-full bg-gradient-to-b from-neutral-900 via-neutral-950 to-black">
+                  <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 mb-3 shadow-lg shadow-amber-500/10">
+                    <Film className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-white mb-1">{movie.title}</h3>
+                  <p className="text-xs text-neutral-400 mb-5 max-w-sm">
+                    Ang pelikulang ito ay naka-1080p HD. I-tap ang button sa ibaba upang buksan sa official media player ng cellphone nang walang loading lag:
+                  </p>
 
-              {/* Mobile View: Dedicated Smooth Cinema Card (No Google Docs bug) */}
-              <div className="flex sm:hidden flex-col items-center justify-center text-center p-6 w-full h-full bg-gradient-to-b from-neutral-900 via-neutral-950 to-black">
-                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 mb-3 shadow-lg shadow-amber-500/10">
-                  <Film className="w-8 h-8" />
+                  <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
+                    <a
+                      href={driveDirectAppUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 py-3 px-4 bg-amber-500 hover:bg-amber-400 active:scale-95 text-neutral-950 font-black text-sm rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-amber-500/30 transition-transform"
+                    >
+                      <Play className="w-4 h-4 fill-current" />
+                      <span>BUKSAN AT I-PLAY</span>
+                    </a>
+                    <a
+                      href={driveDownloadStreamUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-3 px-4 bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-neutral-200 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-transform"
+                    >
+                      <span>Direct Link</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
                 </div>
-                <h3 className="text-base font-bold text-white mb-1">{movie.title}</h3>
-                <p className="text-xs text-neutral-400 mb-4 max-w-xs">
-                  I-tap ang button sa ibaba upang i-play ang pelikula nang maayos at walang error sa iyong cellphone:
-                </p>
-
-                <a
-                  href={driveDirectAppUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full max-w-xs py-3.5 px-6 bg-amber-500 hover:bg-amber-400 active:scale-95 text-neutral-950 font-black text-sm rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-amber-500/30 transition-transform"
-                >
-                  <Play className="w-5 h-5 fill-current" />
-                  <span>PANOORIN NGAYON (PLAY)</span>
-                </a>
-              </div>
+              )}
             </div>
           ) : (
             <video
@@ -137,22 +180,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
             />
           )}
         </div>
-
-        {/* Action Strip */}
-        {driveId && (
-          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2.5 flex items-center justify-between gap-2 text-xs text-amber-400">
-            <span className="truncate">Tugma sa lahat ng Android, iPhone at Computer:</span>
-            <a
-              href={driveDirectAppUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-bold underline shrink-0 hover:text-amber-300 flex items-center gap-1"
-            >
-              <span>Buksan sa Fullscreen</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          </div>
-        )}
 
         {/* Movie Details */}
         <div className="p-4 sm:p-5 overflow-y-auto bg-neutral-900 flex-1">
