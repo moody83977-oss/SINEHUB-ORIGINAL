@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, Share2, Play, Film, MonitorPlay, Maximize2 } from 'lucide-react';
+import { X, ExternalLink, Share2, Film, MonitorPlay, Maximize2 } from 'lucide-react';
 import { Movie } from '../types';
 
 interface VideoPlayerModalProps {
@@ -10,14 +10,12 @@ interface VideoPlayerModalProps {
 export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClose }) => {
   const [embedUrl, setEmbedUrl] = useState<string>('');
   const [directUrl, setDirectUrl] = useState<string>('');
-  const [isDrive, setIsDrive] = useState<boolean>(false);
   const [isDirectVideo, setIsDirectVideo] = useState<boolean>(false);
 
   useEffect(() => {
     if (!movie?.videoUrl) {
       setEmbedUrl('');
       setDirectUrl('');
-      setIsDrive(false);
       setIsDirectVideo(false);
       return;
     }
@@ -38,86 +36,63 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
         }
       }
       setEmbedUrl(`https://www.youtube.com/embed/${id}?autoplay=1`);
-      setIsDrive(false);
       setIsDirectVideo(false);
       return;
     }
 
-    // 2. Streamwish (streamwish.to, streamwish.com, awish.pro, etc.)
+    // 2. Byse / ByseSukior (bysesukior.com, byse.tv, etc.)
+    if (url.includes('byse') || url.includes('sukior')) {
+      // Convert /d/ or /f/ to /e/ embed
+      const id = url.split('/').pop()?.split('?')[0] || '';
+      url = `https://bysesukior.com/e/${id}`;
+      setEmbedUrl(url);
+      setDirectUrl(url);
+      setIsDirectVideo(false);
+      return;
+    }
+
+    // 3. Streamwish
     if (url.includes('streamwish') || url.includes('wish') || url.includes('swish')) {
-      // Auto convert standard link to embed /e/ link
       if (!url.includes('/e/')) {
         const id = url.split('/').pop()?.split('?')[0] || '';
         url = `https://streamwish.to/e/${id}`;
       }
       setEmbedUrl(url);
-      setIsDrive(false);
       setIsDirectVideo(false);
       return;
     }
 
-    // 3. DoodStream (doodstream.com, dood.to, dood.so, ds2play, etc.)
+    // 4. DoodStream
     if (url.includes('dood') || url.includes('ds2play')) {
       if (!url.includes('/e/')) {
         const id = url.split('/').pop()?.split('?')[0] || '';
         url = `https://dood.to/e/${id}`;
       }
       setEmbedUrl(url);
-      setIsDrive(false);
       setIsDirectVideo(false);
       return;
     }
 
-    // 4. Filemoon (filemoon.sx, filemoon.to)
+    // 5. Filemoon
     if (url.includes('filemoon')) {
       if (!url.includes('/e/')) {
         const id = url.split('/').pop()?.split('?')[0] || '';
         url = `https://filemoon.sx/e/${id}`;
       }
       setEmbedUrl(url);
-      setIsDrive(false);
       setIsDirectVideo(false);
       return;
     }
 
-    // 5. Streamtape
-    if (url.includes('streamtape')) {
-      if (!url.includes('/e/')) {
-        const id = url.split('/').pop()?.split('?')[0] || '';
-        url = `https://streamtape.com/e/${id}`;
-      }
-      setEmbedUrl(url);
-      setIsDrive(false);
-      setIsDirectVideo(false);
-      return;
-    }
-
-    // 6. Google Drive
-    if (url.includes('drive.google.com')) {
-      const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
-      if (match && match[1]) {
-        const driveId = match[1];
-        setEmbedUrl(`https://drive.google.com/file/d/${driveId}/preview`);
-        setDirectUrl(`https://drive.google.com/file/d/${driveId}/view?usp=sharing`);
-      } else {
-        setEmbedUrl(url);
-      }
-      setIsDrive(true);
-      setIsDirectVideo(false);
-      return;
-    }
-
-    // 7. Direct MP4 / WebM video file
+    // 6. Direct MP4 / WebM
     if (url.match(/\.(mp4|webm|m4v)(\?.*)?$/i)) {
       setIsDirectVideo(true);
       setEmbedUrl(url);
-      setIsDrive(false);
       return;
     }
 
     // Default Embed
     setEmbedUrl(url);
-    setIsDrive(false);
     setIsDirectVideo(false);
   }, [movie]);
 
@@ -144,7 +119,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-bold transition-colors"
-                title="Buksan sa bagong tab"
               >
                 <Maximize2 className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Fullscreen</span>
@@ -187,7 +161,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
         <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2.5 flex items-center justify-between gap-2 text-xs text-amber-400">
           <span className="truncate flex items-center gap-1.5">
             <MonitorPlay className="w-4 h-4 shrink-0" />
-            <span>Mabilis na Cinema Server: Tugma sa Cellphone, Laptop at TV</span>
+            <span>Mabilis na Cinema Stream: Tugma sa Cellphone, Laptop at TV</span>
           </span>
           {directUrl && (
             <a
@@ -196,7 +170,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
               rel="noopener noreferrer"
               className="font-bold underline shrink-0 hover:text-amber-300 flex items-center gap-1"
             >
-              <span>Buksan sa App</span>
+              <span>Buksan sa Fullscreen</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           )}
