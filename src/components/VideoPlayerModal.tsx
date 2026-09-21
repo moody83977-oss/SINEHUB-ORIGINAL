@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, Share2, Film, MonitorPlay, Maximize2 } from 'lucide-react';
+import { X, Share2, Film, MonitorPlay, Maximize2 } from 'lucide-react';
 import { Movie } from '../types';
 
 interface VideoPlayerModalProps {
@@ -42,7 +42,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
 
     // 2. Byse / ByseSukior (bysesukior.com, byse.tv, etc.)
     if (url.includes('byse') || url.includes('sukior')) {
-      // Convert /d/ or /f/ to /e/ embed
       const id = url.split('/').pop()?.split('?')[0] || '';
       url = `https://bysesukior.com/e/${id}`;
       setEmbedUrl(url);
@@ -91,7 +90,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
       return;
     }
 
-    // Default Embed
+    // Default
     setEmbedUrl(url);
     setIsDirectVideo(false);
   }, [movie]);
@@ -113,17 +112,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
           </div>
 
           <div className="flex items-center gap-2">
-            {directUrl && (
-              <a
-                href={directUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-bold transition-colors"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Fullscreen</span>
-              </a>
-            )}
             <button
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
@@ -133,7 +121,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
           </div>
         </div>
 
-        {/* Video Player Frame */}
+        {/* Video Player Frame with Anti-Ad / Anti-Popup Sandbox */}
         <div className="relative w-full bg-black aspect-video flex items-center justify-center overflow-hidden">
           {isDirectVideo ? (
             <video
@@ -148,6 +136,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
               title={movie.title}
               className="w-full h-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+              sandbox="allow-scripts allow-same-origin allow-presentation allow-fullscreen"
               allowFullScreen
             />
           ) : (
@@ -159,21 +148,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
 
         {/* Stream Banner */}
         <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2.5 flex items-center justify-between gap-2 text-xs text-amber-400">
-          <span className="truncate flex items-center gap-1.5">
-            <MonitorPlay className="w-4 h-4 shrink-0" />
-            <span>Mabilis na Cinema Stream: Tugma sa Cellphone, Laptop at TV</span>
+          <span className="truncate flex items-center gap-1.5 font-medium">
+            <MonitorPlay className="w-4 h-4 shrink-0 text-amber-500" />
+            <span>SineHub Cinema Stream • Walang Pop-up Ads</span>
           </span>
-          {directUrl && (
-            <a
-              href={directUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-bold underline shrink-0 hover:text-amber-300 flex items-center gap-1"
-            >
-              <span>Buksan sa Fullscreen</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          )}
         </div>
 
         {/* Movie Info */}
