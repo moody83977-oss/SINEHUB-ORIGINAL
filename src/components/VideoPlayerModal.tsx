@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, Share2, Play, Film } from 'lucide-react';
+import { X, ExternalLink, Share2, Play, Film, Smartphone, Monitor } from 'lucide-react';
 import { Movie } from '../types';
 
 interface VideoPlayerModalProps {
@@ -86,7 +86,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
           </div>
         </div>
 
-        {/* Video Player */}
+        {/* Video Player Box */}
         <div className="relative w-full bg-black aspect-video flex items-center justify-center overflow-hidden">
           {isYouTube ? (
             <iframe
@@ -96,38 +96,52 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
               allowFullScreen
             />
-          ) : (
+          ) : driveId ? (
             <div className="relative w-full h-full flex flex-col items-center justify-center">
+              {/* Desktop view: Iframe */}
               <iframe
                 src={drivePreviewUrl}
                 title={movie.title}
-                className="w-full h-full border-0"
+                className="hidden sm:block w-full h-full border-0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 allowFullScreen
               />
 
-              {/* Mobile overlay button kung sakaling mag-error si Google Docs */}
-              {driveId && (
-                <div className="absolute inset-x-4 bottom-4 sm:hidden flex justify-center">
-                  <a
-                    href={driveDirectAppUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 px-4 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-black text-sm rounded-xl flex items-center justify-center gap-2 shadow-2xl shadow-amber-500/50"
-                  >
-                    <Play className="w-4 h-4 fill-current" />
-                    <span>I-TAP PARA I-PLAY SA CELLPHONE</span>
-                  </a>
+              {/* Mobile View: Dedicated Smooth Cinema Card (No Google Docs bug) */}
+              <div className="flex sm:hidden flex-col items-center justify-center text-center p-6 w-full h-full bg-gradient-to-b from-neutral-900 via-neutral-950 to-black">
+                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 mb-3 shadow-lg shadow-amber-500/10">
+                  <Film className="w-8 h-8" />
                 </div>
-              )}
+                <h3 className="text-base font-bold text-white mb-1">{movie.title}</h3>
+                <p className="text-xs text-neutral-400 mb-4 max-w-xs">
+                  I-tap ang button sa ibaba upang i-play ang pelikula nang maayos at walang error sa iyong cellphone:
+                </p>
+
+                <a
+                  href={driveDirectAppUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full max-w-xs py-3.5 px-6 bg-amber-500 hover:bg-amber-400 active:scale-95 text-neutral-950 font-black text-sm rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-amber-500/30 transition-transform"
+                >
+                  <Play className="w-5 h-5 fill-current" />
+                  <span>PANOORIN NGAYON (PLAY)</span>
+                </a>
+              </div>
             </div>
+          ) : (
+            <video
+              controls
+              autoPlay
+              src={url}
+              className="w-full h-full"
+            />
           )}
         </div>
 
-        {/* Action strip */}
+        {/* Action Strip */}
         {driveId && (
           <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2.5 flex items-center justify-between gap-2 text-xs text-amber-400">
-            <span className="truncate">Para sa tuluy-tuloy na panonood sa cellphone:</span>
+            <span className="truncate">Tugma sa lahat ng Android, iPhone at Computer:</span>
             <a
               href={driveDirectAppUrl}
               target="_blank"
@@ -140,7 +154,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
           </div>
         )}
 
-        {/* Movie Info */}
+        {/* Movie Details */}
         <div className="p-4 sm:p-5 overflow-y-auto bg-neutral-900 flex-1">
           <div className="flex items-center justify-between gap-2">
             <div>
