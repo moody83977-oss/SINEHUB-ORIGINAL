@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, Share2, Play, Film, Server, Zap } from 'lucide-react';
+import { X, ExternalLink, Share2, Play, Film, MonitorPlay, Maximize2 } from 'lucide-react';
 import { Movie } from '../types';
 
 interface VideoPlayerModalProps {
@@ -8,55 +8,125 @@ interface VideoPlayerModalProps {
 }
 
 export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClose }) => {
-  const [driveId, setDriveId] = useState<string | null>(null);
-  const [activeServer, setActiveServer] = useState<'drive' | 'direct' | 'preview'>('drive');
+  const [embedUrl, setEmbedUrl] = useState<string>('');
+  const [directUrl, setDirectUrl] = useState<string>('');
+  const [isDrive, setIsDrive] = useState<boolean>(false);
+  const [isDirectVideo, setIsDirectVideo] = useState<boolean>(false);
 
   useEffect(() => {
     if (!movie?.videoUrl) {
-      setDriveId(null);
+      setEmbedUrl('');
+      setDirectUrl('');
+      setIsDrive(false);
+      setIsDirectVideo(false);
       return;
     }
 
-    const url = movie.videoUrl.trim();
+    let url = movie.videoUrl.trim();
+    setDirectUrl(url);
+
+    // 1. YouTube
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      let id = '';
+      if (url.includes('youtu.be')) {
+        id = url.split('/').pop()?.split('?')[0] || '';
+      } else {
+        try {
+          id = new URL(url).searchParams.get('v') || '';
+        } catch {
+          id = url.split('v=')[1]?.split('&')[0] || '';
+        }
+      }
+      setEmbedUrl(`https://www.youtube.com/embed/${id}?autoplay=1`);
+      setIsDrive(false);
+      setIsDirectVideo(false);
+      return;
+    }
+
+    // 2. Streamwish (streamwish.to, streamwish.com, awish.pro, etc.)
+    if (url.includes('streamwish') || url.includes('wish') || url.includes('swish')) {
+      // Auto convert standard link to embed /e/ link
+      if (!url.includes('/e/')) {
+        const id = url.split('/').pop()?.split('?')[0] || '';
+        url = `https://streamwish.to/e/${id}`;
+      }
+      setEmbedUrl(url);
+      setIsDrive(false);
+      setIsDirectVideo(false);
+      return;
+    }
+
+    // 3. DoodStream (doodstream.com, dood.to, dood.so, ds2play, etc.)
+    if (url.includes('dood') || url.includes('ds2play')) {
+      if (!url.includes('/e/')) {
+        const id = url.split('/').pop()?.split('?')[0] || '';
+        url = `https://dood.to/e/${id}`;
+      }
+      setEmbedUrl(url);
+      setIsDrive(false);
+      setIsDirectVideo(false);
+      return;
+    }
+
+    // 4. Filemoon (filemoon.sx, filemoon.to)
+    if (url.includes('filemoon')) {
+      if (!url.includes('/e/')) {
+        const id = url.split('/').pop()?.split('?')[0] || '';
+        url = `https://filemoon.sx/e/${id}`;
+      }
+      setEmbedUrl(url);
+      setIsDrive(false);
+      setIsDirectVideo(false);
+      return;
+    }
+
+    // 5. Streamtape
+    if (url.includes('streamtape')) {
+      if (!url.includes('/e/')) {
+        const id = url.split('/').pop()?.split('?')[0] || '';
+        url = `https://streamtape.com/e/${id}`;
+      }
+      setEmbedUrl(url);
+      setIsDrive(false);
+      setIsDirectVideo(false);
+      return;
+    }
+
+    // 6. Google Drive
     if (url.includes('drive.google.com')) {
       const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
       if (match && match[1]) {
-        setDriveId(match[1]);
+        const driveId = match[1];
+        setEmbedUrl(`https://drive.google.com/file/d/${driveId}/preview`);
+        setDirectUrl(`https://drive.google.com/file/d/${driveId}/view?usp=sharing`);
       } else {
-        setDriveId(null);
+        setEmbedUrl(url);
       }
-    } else {
-      setDriveId(null);
+      setIsDrive(true);
+      setIsDirectVideo(false);
+      return;
     }
+
+    // 7. Direct MP4 / WebM video file
+    if (url.match(/\.(mp4|webm|m4v)(\?.*)?$/i)) {
+      setIsDirectVideo(true);
+      setEmbedUrl(url);
+      setIsDrive(false);
+      return;
+    }
+
+    // Default Embed
+    setEmbedUrl(url);
+    setIsDrive(false);
+    setIsDirectVideo(false);
   }, [movie]);
 
   if (!movie) return null;
 
-  const url = movie.videoUrl.trim();
-  const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
-  let youtubeEmbed = '';
-  if (isYouTube) {
-    let id = '';
-    if (url.includes('youtu.be')) {
-      id = url.split('/').pop()?.split('?')[0] || '';
-    } else {
-      try {
-        id = new URL(url).searchParams.get('v') || '';
-      } catch {
-        id = url.split('v=')[1]?.split('&')[0] || '';
-      }
-    }
-    youtubeEmbed = `https://www.youtube.com/embed/${id}?autoplay=1`;
-  }
-
-  const drivePreviewUrl = driveId ? `https://drive.google.com/file/d/${driveId}/preview` : url;
-  const driveDirectAppUrl = driveId ? `https://drive.google.com/file/d/${driveId}/view?usp=sharing` : url;
-  const driveDownloadStreamUrl = driveId ? `https://drive.google.com/uc?id=${driveId}&export=download` : url;
-
   return (
     <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
       <div className="relative w-full max-w-5xl bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[95vh]">
-        {/* Top bar */}
+        {/* Top Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 bg-neutral-950">
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 text-xs font-bold border border-amber-500/20">
@@ -68,15 +138,16 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
           </div>
 
           <div className="flex items-center gap-2">
-            {driveId && (
+            {directUrl && (
               <a
-                href={driveDirectAppUrl}
+                href={directUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-neutral-950 text-xs font-black hover:bg-amber-400 transition-colors shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-bold transition-colors"
+                title="Buksan sa bagong tab"
               >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Panoorin sa Phone</span>
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Fullscreen</span>
               </a>
             )}
             <button
@@ -88,100 +159,50 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ movie, onClo
           </div>
         </div>
 
-        {/* Streaming Servers Selector */}
-        {driveId && (
-          <div className="flex items-center gap-2 px-4 py-2 bg-neutral-950/80 border-b border-neutral-800 text-xs overflow-x-auto">
-            <span className="text-neutral-500 flex items-center gap-1 shrink-0">
-              <Server className="w-3.5 h-3.5" /> Server:
-            </span>
-            <button
-              onClick={() => setActiveServer('drive')}
-              className={`px-3 py-1 rounded-md font-semibold transition-colors shrink-0 flex items-center gap-1 ${
-                activeServer === 'drive'
-                  ? 'bg-amber-500 text-neutral-950'
-                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-              }`}
-            >
-              <Zap className="w-3 h-3" /> Mobile High-Speed (Recommended)
-            </button>
-            <button
-              onClick={() => setActiveServer('preview')}
-              className={`px-3 py-1 rounded-md font-semibold transition-colors shrink-0 ${
-                activeServer === 'preview'
-                  ? 'bg-amber-500 text-neutral-950'
-                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-              }`}
-            >
-              Web Embedded (Laptop)
-            </button>
-          </div>
-        )}
-
-        {/* Video Player Box */}
+        {/* Video Player Frame */}
         <div className="relative w-full bg-black aspect-video flex items-center justify-center overflow-hidden">
-          {isYouTube ? (
+          {isDirectVideo ? (
+            <video
+              controls
+              autoPlay
+              src={embedUrl}
+              className="w-full h-full"
+            />
+          ) : embedUrl ? (
             <iframe
-              src={youtubeEmbed}
+              src={embedUrl}
               title={movie.title}
               className="w-full h-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
               allowFullScreen
             />
-          ) : driveId ? (
-            <div className="relative w-full h-full flex flex-col items-center justify-center">
-              {activeServer === 'preview' ? (
-                <iframe
-                  src={drivePreviewUrl}
-                  title={movie.title}
-                  className="w-full h-full border-0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                  allowFullScreen
-                />
-              ) : (
-                /* Mobile High-Speed Server with Instant Direct Player */
-                <div className="flex flex-col items-center justify-center text-center p-6 w-full h-full bg-gradient-to-b from-neutral-900 via-neutral-950 to-black">
-                  <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 mb-3 shadow-lg shadow-amber-500/10">
-                    <Film className="w-8 h-8" />
-                  </div>
-                  <h3 className="text-base sm:text-lg font-bold text-white mb-1">{movie.title}</h3>
-                  <p className="text-xs text-neutral-400 mb-5 max-w-sm">
-                    Ang pelikulang ito ay naka-1080p HD. I-tap ang button sa ibaba upang buksan sa official media player ng cellphone nang walang loading lag:
-                  </p>
-
-                  <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
-                    <a
-                      href={driveDirectAppUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 py-3 px-4 bg-amber-500 hover:bg-amber-400 active:scale-95 text-neutral-950 font-black text-sm rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-amber-500/30 transition-transform"
-                    >
-                      <Play className="w-4 h-4 fill-current" />
-                      <span>BUKSAN AT I-PLAY</span>
-                    </a>
-                    <a
-                      href={driveDownloadStreamUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="py-3 px-4 bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-neutral-200 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-transform"
-                    >
-                      <span>Direct Link</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                </div>
-              )}
-            </div>
           ) : (
-            <video
-              controls
-              autoPlay
-              src={url}
-              className="w-full h-full"
-            />
+            <div className="text-neutral-500 text-sm flex items-center gap-2">
+              <Film className="w-5 h-5" /> Walang video link na nakalagay.
+            </div>
           )}
         </div>
 
-        {/* Movie Details */}
+        {/* Stream Banner */}
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2.5 flex items-center justify-between gap-2 text-xs text-amber-400">
+          <span className="truncate flex items-center gap-1.5">
+            <MonitorPlay className="w-4 h-4 shrink-0" />
+            <span>Mabilis na Cinema Server: Tugma sa Cellphone, Laptop at TV</span>
+          </span>
+          {directUrl && (
+            <a
+              href={directUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold underline shrink-0 hover:text-amber-300 flex items-center gap-1"
+            >
+              <span>Buksan sa App</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
+        </div>
+
+        {/* Movie Info */}
         <div className="p-4 sm:p-5 overflow-y-auto bg-neutral-900 flex-1">
           <div className="flex items-center justify-between gap-2">
             <div>
