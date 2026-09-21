@@ -28,7 +28,7 @@ const INITIAL_MOVIES: Movie[] = [
     rating: 4.9,
     quality: '1080p Full HD',
     posterUrl: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80',
-    videoUrl:'https://drive.google.com/file/d/.../view',
+    videoUrl:'https://bysesukior.com/e/iivehdozanbm',
     isOriginal: true,
   },
   {
